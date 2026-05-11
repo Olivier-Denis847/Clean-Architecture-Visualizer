@@ -59,42 +59,45 @@ describe("Ensures that verifyOutNeighbours correctly classifies the number of Cl
         return result;
     }
 
-    const emptyUseCase = new useCaseGraph("empty");
-    const goodUseCase = new useCaseGraph("good");
-    const singleViolation = new useCaseGraph("single");
-    const multipleViolations = new useCaseGraph("multiple");
-
-    const allUseCaseGraphs = [
-        emptyUseCase,
-        goodUseCase,
-        singleViolation,
-        multipleViolations
-    ];
-
-    afterEach(async () => {
-        allUseCaseGraphs.forEach(graph => {
-            graph.resetViolations();
+    function makeUseCaseGraphs(types: string[]): useCaseGraph[] {
+        let useCaseGraphs: useCaseGraph[] = [];
+        types.forEach(type => {
+            switch (type) {
+                case "empty":
+                    useCaseGraphs.push(new useCaseGraph("empty"));
+                    break;
+                case "good":
+                    const goodUseCase = new useCaseGraph("good");
+                    goodUseCase.setNodeNeighbour("useCaseInteractor", "entities");
+                    goodUseCase.setNodeNeighbour("dataAccess", "database");
+                    goodUseCase.setNodeNeighbour("view", "viewModel");
+                    goodUseCase.setNodeNeighbour("view", "controller");
+                    useCaseGraphs.push(goodUseCase);
+                    break;
+                case "single":
+                    const singleViolation = new useCaseGraph("single");
+                    singleViolation.setNodeNeighbour("view", "viewModel");
+                    singleViolation.setNodeNeighbour("view", "entities");
+                    useCaseGraphs.push(singleViolation);
+                    break;
+                case "multiple":
+                    const multipleViolations = new useCaseGraph("multiple");
+                    multipleViolations.setNodeNeighbour("entities", "view");
+                    multipleViolations.setNodeNeighbour("controller", "entities");
+                    useCaseGraphs.push(multipleViolations);
+                    break;
+            }
         });
-    });
-
-    goodUseCase.setNodeNeighbour("useCaseInteractor", "entities");
-    goodUseCase.setNodeNeighbour("dataAccess", "database");
-    goodUseCase.setNodeNeighbour("view", "viewModel");
-    goodUseCase.setNodeNeighbour("view", "controller");
-
-    singleViolation.setNodeNeighbour("view", "viewModel");
-    singleViolation.setNodeNeighbour("view", "entities");
-
-    multipleViolations.setNodeNeighbour("entities", "view");
-    multipleViolations.setNodeNeighbour("controller", "entities");
+        return useCaseGraphs;
+    }
 
     const testCases = [
-        ["Empty usecase has 0 violations",                                  [emptyUseCase],                         0],
-        ["Use case with no violations reports 0 violations",                [goodUseCase],                          0],
-        ["Use case with 1 violation reports 1 violation",                   [singleViolation],                      1],
-        ["Use case with 2 violations reports 2 violations",                 [multipleViolations],                   2],
-        ["Multiple usecases with violations are properly reported",         [singleViolation, multipleViolations],  3],
-        ["Only use cases with violations report violations",                allUseCaseGraphs,                       3],
+        ["Empty usecase has 0 violations",                              makeUseCaseGraphs(["empty"]),                                   0],
+        ["Use case with no violations reports 0 violations",            makeUseCaseGraphs(["good"]),                                    0],
+        ["Use case with 1 violation reports 1 violation",               makeUseCaseGraphs(["single"]),                                  1],
+        ["Use case with 2 violations reports 2 violations",             makeUseCaseGraphs(["multiple"]),                                2],
+        ["Multiple usecases with violations are properly reported",     makeUseCaseGraphs(["single", "multiple"]),                      3],
+        ["Only use cases with violations report violations",            makeUseCaseGraphs(["empty", "good", "single", "multiple"]),     3],
     ];
 
     it.each(testCases)(
